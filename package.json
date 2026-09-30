@@ -1,0 +1,17 @@
+{
+  "name": "supersmashbros",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  }
+}

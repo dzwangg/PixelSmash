@@ -1,0 +1,152 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Smash Pad</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+  :root { --c: #888; }
+  html, body { margin: 0; height: 100%; overflow: hidden; position: fixed; inset: 0; overscroll-behavior: none; color: #fff; font-family: 'Press Start 2P', monospace;
+    background: radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--c) 35%, #111) 0%, #111 70%); }
+  #status { position: fixed; top: 10px; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--c); text-shadow: 2px 2px 0 #000; pointer-events: none; }
+  #left { position: fixed; left: 0; top: 0; bottom: 0; width: 50%; }
+  #right { position: fixed; right: 0; top: 0; bottom: 0; width: 50%; }
+  #base { position: absolute; width: 170px; height: 170px; margin: -85px 0 0 -85px; border-radius: 50%; border: 4px solid #444; background: rgba(26,26,26,.8); box-shadow: inset 0 0 20px #000; left: 30%; top: 55%; pointer-events: none; }
+  #knob { position: absolute; width: 76px; height: 76px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #bbb, #555); left: 43px; top: 43px; box-shadow: 0 4px 0 #222; }
+  #base.idle { opacity: .45; }
+  .btn { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; pointer-events: none;
+    transform: translate(-50%, -50%); border: 4px solid rgba(0,0,0,.4); box-shadow: 0 6px 0 rgba(0,0,0,.5); text-shadow: 2px 2px 0 rgba(0,0,0,.5); }
+  .btn.on { filter: brightness(1.5); transform: translate(-50%, -50%) translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.5); }
+  /* positions are % of the right half; any touch there goes to the nearest button */
+  #A { background: #2fb350; width: 110px; height: 110px; left: 58%; top: 58%; font-size: 24px; }
+  #B { background: #d8413a; width: 86px; height: 86px; left: 26%; top: 80%; font-size: 18px; }
+  #J { background: #3b7fd6; width: 90px; height: 90px; left: 84%; top: 32%; font-size: 10px; }
+  #S { background: #8e5bd6; width: 90px; height: 90px; left: 30%; top: 30%; font-size: 9px; }
+  #P { position: fixed; top: 34px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 8px 16px; border-radius: 16px; background: #333; border: 3px solid #555; font-size: 9px; color: #ccc; }
+  #P.on { filter: brightness(1.6); }
+  #hint { position: fixed; bottom: 8px; right: 12px; font-size: 8px; color: #777; pointer-events: none; }
+  #rotate { display: none; position: fixed; inset: 0; background: #111; align-items: center; justify-content: center; font-size: 14px; line-height: 2; text-align: center; z-index: 9; }
+  @media (orientation: portrait) { #rotate { display: flex; } }
+</style>
+</head><body>
+<div id="status">Connecting…</div>
+<div id="left"><div id="base" class="idle"><div id="knob"></div></div></div>
+<div id="right">
+  <div class="btn" id="S">SHIELD</div>
+  <div class="btn" id="J">JUMP</div>
+  <div class="btn" id="A">A</div>
+  <div class="btn" id="B">B</div>
+</div>
+<div id="P">START</div>
+<div id="hint">SHIELD+A = GRAB</div>
+<div id="rotate">Rotate your phone<br>sideways 🔄</div>
+<script>
+// ---- kill every browser gesture: double-tap zoom, pinch zoom, scroll, long-press menu ----
+for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'gesturestart', 'gesturechange', 'gestureend', 'dblclick', 'contextmenu'])
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+// if a zoom still slips through (old iOS), reset the page so the layout recovers
+if (window.visualViewport) visualViewport.addEventListener('resize', () => {
+  if (visualViewport.scale > 1.01) { const m = document.querySelector('meta[name=viewport]'); const c = m.content; m.content = c + ',width=device-width'; setTimeout(() => m.content = c, 50); }
+});
+// Android: go fullscreen on first touch (iOS: use Share → Add to Home Screen for fullscreen)
+document.addEventListener('touchend', () => { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); }, { once: true });
+
+const SLOT_COLORS = ['#e74c3c', '#3498db'];
+const input = { x: 0, y: 0, a: 0, b: 0, j: 0, s: 0, p: 0 };
+const status = document.getElementById('status');
+let ws, dirty = true, slot = -1;
+const setColor = c => document.documentElement.style.setProperty('--c', c);
+const buzz = ms => navigator.vibrate && navigator.vibrate(ms);
+
+// a stable id for this phone, so reconnecting reuses the same player slot
+const PAD_ID = (() => { try { let v = localStorage.getItem('padId'); if (!v) { v = Math.random().toString(36).slice(2, 10); localStorage.setItem('padId', v); } return v; } catch { return Math.random().toString(36).slice(2, 10); } })();
+let replaced = false;
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/?role=pad&id=${PAD_ID}`);
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'slot') { slot = m.slot; status.textContent = `P${slot + 1}`; setColor(SLOT_COLORS[slot]); }
+    if (m.type === 'info') { status.textContent = `P${slot + 1} · ${m.name}`; setColor(m.color); }
+    if (m.type === 'buzz') buzz(m.ms);
+    if (m.type === 'full') status.textContent = 'Game full';
+    if (m.type === 'replaced') replaced = true; // this phone opened the controller in another tab
+  };
+  ws.onclose = () => {
+    setColor('#888');
+    if (replaced) { status.textContent = 'Opened in another tab — tap to use this one'; document.addEventListener('touchend', () => { replaced = false; connect(); }, { once: true }); return; }
+    status.textContent = 'Reconnecting…'; setTimeout(connect, 1000);
+  };
+}
+connect();
+// Send the moment input changes (no waiting for the next frame), and resend the current state
+// 20×/s anyway: phones put Wi-Fi to sleep between packets, which adds 50-100ms to the next press.
+function send() { if (ws.readyState === 1) ws.send(JSON.stringify(input)); dirty = false; }
+setInterval(send, 50);
+(function loop() {
+  if (dirty) send();
+  requestAnimationFrame(loop);
+})();
+
+// ---- buttons: a finger presses the nearest button if it's close to one (a resting palm far away does nothing);
+// sliding only switches once the finger is actually inside another button ----
+const right = document.getElementById('right');
+const btns = ['A', 'B', 'J', 'S'].map(id => ({ id, key: id.toLowerCase(), el: document.getElementById(id) }));
+const fingerBtn = new Map(); // touch id -> button
+let centers = null; // cached button centres (layout reads inside touch handlers are slow)
+addEventListener('resize', () => { centers = null; });
+function nearest(t, cur) {
+  centers ??= btns.map(b => { const r = b.el.getBoundingClientRect(); return { b, x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }; });
+  let best = null, bd = Infinity;
+  for (const c of centers) { const d = Math.hypot(t.clientX - c.x, t.clientY - c.y) / c.r; if (d < bd) { bd = d; best = c.b; } }
+  if (cur) return bd < 1 ? best : cur; // keep the held button unless the finger is inside a different one
+  return bd < 1.2 ? best : null;
+}
+function syncButtons() {
+  for (const b of btns) {
+    const on = [...fingerBtn.values()].includes(b) ? 1 : 0;
+    b.el.classList.toggle('on', !!on);
+    if (input[b.key] !== on) { input[b.key] = on; send(); if (on) buzz(10); }
+  }
+}
+const btnTouch = e => { for (const t of e.changedTouches) { const b = nearest(t, fingerBtn.get(t.identifier)); if (b) fingerBtn.set(t.identifier, b); } syncButtons(); };
+const btnEnd = e => { for (const t of e.changedTouches) fingerBtn.delete(t.identifier); syncButtons(); };
+right.addEventListener('touchstart', btnTouch); right.addEventListener('touchmove', btnTouch);
+right.addEventListener('touchend', btnEnd); right.addEventListener('touchcancel', btnEnd);
+
+// ---- START: pause / resume ----
+const startEl = document.getElementById('P');
+const setStart = v => { startEl.classList.toggle('on', !!v); input.p = v; send(); };
+startEl.addEventListener('touchstart', () => { setStart(1); buzz(10); });
+startEl.addEventListener('touchend', () => setStart(0)); startEl.addEventListener('touchcancel', () => setStart(0));
+
+// ---- floating stick: appears where the thumb lands on the left half ----
+const left = document.getElementById('left'), base = document.getElementById('base'), knob = document.getElementById('knob');
+let stickId = null, cx = 0, cy = 0;
+const R = 85;
+left.addEventListener('touchstart', e => {
+  if (stickId !== null) return;
+  const t = e.changedTouches[0]; stickId = t.identifier; cx = t.clientX; cy = t.clientY;
+  base.style.left = cx + 'px'; base.style.top = cy + 'px'; base.classList.remove('idle');
+  moveStick(t);
+});
+left.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (t.identifier === stickId) moveStick(t); });
+function moveStick(t) {
+  let dx = t.clientX - cx, dy = t.clientY - cy;
+  const d = Math.hypot(dx, dy);
+  if (d > R) { cx += dx * (1 - R / d); cy += dy * (1 - R / d); dx *= R / d; dy *= R / d; base.style.left = cx + 'px'; base.style.top = cy + 'px'; } // base follows a thumb that drifts past the edge
+  knob.style.transform = `translate(${dx}px,${dy}px)`;
+  const nx = +(dx / R).toFixed(2), ny = +(dy / R).toFixed(2);
+  if (nx !== input.x || ny !== input.y) { input.x = nx; input.y = ny; send(); }
+}
+const stickEnd = e => {
+  for (const t of e.changedTouches) if (t.identifier === stickId) {
+    stickId = null; knob.style.transform = ''; base.classList.add('idle'); base.style.left = ''; base.style.top = '';
+    input.x = input.y = 0; send();
+  }
+};
+left.addEventListener('touchend', stickEnd); left.addEventListener('touchcancel', stickEnd);
+</script>
+</body></html>
