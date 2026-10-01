@@ -80,7 +80,7 @@ function shakeCam(n) { shake = Math.max(shake, n); }
 function popText(x, y, s, c) { particles.push({ x, y, vx: 0, vy: -1.2, life: 60, max: 60, text: s, c }); }
 
 // ================= STAGE HELPERS =================
-const surfaces = () => [stage.main, ...stage.plats];
+const surfaces = () => [stage.main, ...stage.plats, ...projectiles.filter(p => p.plat && p.life > 0)]; // p.plat: a drawn platform (Inky)
 function groundAt(x, y) { for (const s of surfaces()) if (x >= s.x1 && x <= s.x2 && Math.abs(s.y - y) < 30) return s.y; return null; }
 const inMain = (x, y) => { const M = stage.main; return x > M.x1 && x < M.x2 && y > M.y + 2 && y < M.y + M.depth; };
 function teleport(f, nx, ny) {
@@ -397,8 +397,8 @@ function physics(f, inp) {
   if (f.ground) {
     const s = f.ground;
     f.x += s.dx || 0; f.y = s.y;
-    if (f.x < s.x1 || f.x > s.x2) {
-      if (['move', 'shield', 'dodge', 'land', 'dizzy', 'hold'].includes(f.act)) f.x = clamp(f.x, s.x1, s.x2);
+    if (f.x < s.x1 || f.x > s.x2 || s.life <= 0) { // s.life: a drawn platform that has run out
+      if (!(s.life <= 0) && ['move', 'shield', 'dodge', 'land', 'dizzy', 'hold'].includes(f.act)) f.x = clamp(f.x, s.x1, s.x2);
       else { f.ground = null; if (f.act === 'stand') { setAct(f, 'air'); f.coyote = 6; } }
     }
   } else if (f.vy >= 0) {
@@ -728,7 +728,7 @@ function updateCam() {
   cam.x += ((x1 + x2) / 2 - cam.x) * .08; cam.y += ((y1 + y2) / 2 - cam.y) * .08; cam.z += (z - cam.z) * .06;
 }
 
-const COLS = 10;
+const COLS = 11; // 4 rows fit above the player panels (44 fighters max)
 function updateSelect() {
   const M = menuInputs();
   for (const i of [0, 1]) {
@@ -1032,7 +1032,7 @@ function drawSelect() {
   menuBg('#1a0f40', '#3a1450');
   text('CHOOSE YOUR FIGHTER', W / 2, 36, 26, '#ffd23f', 'center', '#000');
   CHARS.forEach((ch, i) => {
-    const w = 118, h = 84, x = 18 + (i % COLS) * 125, y = 52 + (i / COLS | 0) * 89, hover = sel.map(s => s.cur === i);
+    const w = 108, h = 84, x = 18 + (i % COLS) * 115, y = 52 + (i / COLS | 0) * 89, hover = sel.map(s => s.cur === i);
     rrect(x, y, w, h, 10, shade(ch.color, -62), '#000', 3);
     ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.clip();
     ctx.fillStyle = shade(ch.color, -40); ctx.fillRect(x, y + 58, w, 26);
