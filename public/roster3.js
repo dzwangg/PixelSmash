@@ -30,6 +30,14 @@ function drawYarn(ctx, p) { pxDisc(ctx, p.x, p.y, p.r, '#c05ab0'); ctx.strokeSty
 function drawKunai(ctx, p) { const d = Math.sign(p.vx) || 1; pxRect(ctx, p.x - d * 12, p.y - 2, 18, 4, '#9aa0aa'); pxRect(ctx, p.x + d * 6, p.y - 3, 6, 6, '#3bf0ff'); if (p.kind === 'marker') pxDisc(ctx, p.x, p.y, 16, 'rgba(59,240,255,.3)'); }
 function drawEggBomb(ctx, p) { if (p.boom) { pxDisc(ctx, p.x, p.y, p.r * (1 - p.life / 8), '#ffd23f'); return; } pxDisc(ctx, p.x, p.y, 11, '#f4f0e0'); pxRect(ctx, p.x - 2, p.y - 16, 3, 6, '#ff5a3b'); }
 function drawSlime(ctx, p) { pxDisc(ctx, p.x, p.y, p.r, '#6ad84a'); pxRect(ctx, p.x - 5, p.y - 6, 5, 5, '#c8ffb0'); }
+function drawInkBlot(ctx, p) { pxDisc(ctx, p.x, p.y, p.r, '#15151a'); pxDisc(ctx, p.x - Math.sign(p.vx) * 10, p.y + 4, 6, '#15151a'); pxRect(ctx, p.x - 4, p.y - 6, 5, 5, '#3a5aff'); }
+function drawInkPlat(ctx, p) { // paper strip with a wobbly ink line; blinks before it fades
+  if (p.life < 50 && p.t % 6 < 3) return;
+  pxRect(ctx, p.x1, p.y - 4, p.x2 - p.x1, 12, '#f4f0e0');
+  ctx.strokeStyle = '#15151a'; ctx.lineWidth = 3; ctx.beginPath();
+  for (let x = p.x1; x <= p.x2; x += 14) { const y = p.y + Math.sin(x * .3 + p.x) * 2; x === p.x1 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+  for (let x = p.x1 + 8; x < p.x2; x += 18) pxRect(ctx, x, p.y + 4, 8, 2, '#3a5aff');
+}
 function drawPuddle(ctx, p) { ctx.fillStyle = '#4fbf3a'; ctx.globalAlpha = p.inert ? .5 : .85; ctx.beginPath(); ctx.ellipse(p.x, p.y + 6, 46, 10, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1; for (let i = 0; i < 3; i++) pxRect(ctx, p.x - 30 + i * 24, p.y - 3 - ((p.t + i * 7) % 20 < 3 ? 6 : 0), 6, 6, '#c8ffb0'); }
 function drawBox(ctx, p) { const open = p.t >= p.arm; pxRect(ctx, p.x - 21, p.y - 30, 42, 36, open ? '#7a2ab0' : '#4a1a70'); pxRect(ctx, p.x - 21, p.y - 30, 42, 6, '#f2c14e'); text('?', p.x, p.y - 10, 14, '#ffd23f', 'center', null); if (p.bite) fxBurst(p.x, p.y - 30, RAINBOW[p.t % 6], 3, 6, 16); }
 
@@ -397,6 +405,37 @@ CHARS.push(
         spawn({ owner: f.i, kind: 'puddle', x: f.x + f.face * 40, y: f.y - 6, vy: 2, grav: .5, onGround: 'stop', r: 40, life: 480, dmg: 2, b: 1, g: 0, ang: 80, slow: 90, refl: false, draw: drawPuddle,
           tick(p) { if (p.cd && --p.cd === 0) p.inert = false; }, onHit(p) { p.cd = 40; } });
       } },
+    },
+  },
+  { // ---------- INKY (original) ----------
+    id: 'inky', name: 'INKY', title: 'Living Doodle', color: '#3a5aff', fx: '#9fb4ff',
+    desc: 'A sketch that escaped the page. Draws her own platforms; erases your shots.', stats: { speed: 4, power: 2, weight: 2, jump: 4 },
+    ...phys({ walk: 6, air: 5.6, jump: 16.5, djump: 14.5, weight: 88, grav: .72 }), pw: .95, rc: 1.05, sp: .95,
+    specials: ['Ink Blot', 'Brush Stroke', 'Sketch Step', 'Eraser'],
+    draw: look({ skin: '#f4f0e0', eye: '#15151a', top: '#15151a', sleeve: '#f4f0e0', legs: '#15151a', shin: '#f4f0e0', boots: '#15151a',
+      back(g, h) { limb(g, { x: h.x - 5, y: h.y + 20 }, { x: h.x - 13, y: h.y - 4 }, 1.6, '#c8a060'); limb(g, { x: h.x - 13, y: h.y - 4 }, { x: h.x - 15, y: h.y - 9 }, 1.2, '#3a5aff'); },
+      head(g, h) { dome(g, h, '#15151a'); oval(g, h.x - 1, h.y - 5.5, 6.5, 2, '#d8263a'); box(g, h.x - 1.5, h.y - 8, 1.5, 1.5, '#d8263a'); } }),
+    specials_: {
+      n: mShot({ s: 9, e: 14, sfx: 'throw', kind: 'ink_blot', vx: 12, vy: -3, grav: .25, r: 13, life: 60, dmg: 6, b: 4, g: .25, ang: 40, onGround: 'vanish', draw: drawInkBlot }),
+      s: mDash({ spd: 13, a: 14, dmg: 10, b: 6, g: .45, ang: 38, fx: '#3a5aff' }),
+      // jump, and at the top of the rise draw a platform under her feet (one at a time, 7s cooldown so it can't stall forever)
+      u: { dur: 30, airUses: 1, dmg: 6, b: 5, g: .2, ang: 85, p: ['crouch', 'jump'], hbAt: (f, t) => t >= 4 && t < 10 ? [[0, -40, 40]] : null,
+        start(f) { f.inkDrew = false; },
+        tick(f, t) {
+          if (t === 4) { f.vy = -15; f.ground = null; SFX.play('djump'); }
+          if (t < 8 || f.inkDrew || f.vy < -1 || (f.inkCD || 0) > T) return;
+          f.inkDrew = true; f.inkCD = T + 420; killOwned(f, 'ink_plat'); SFX.play('grab');
+          spawn({ owner: f.i, kind: 'ink_plat', plat: 1, soft: true, x: f.x, y: f.y + 2, x1: f.x - 70, x2: f.x + 70, r: 1, life: 240, inert: true, stopped: true, refl: false, draw: drawInkPlat });
+        } },
+      // rub out every enemy shot nearby
+      d: { dur: 26, dmg: 5, b: 5, g: .15, ang: 60, away: 1, p: ['counter', 'spin'], hbAt: (f, t) => t >= 4 && t < 8 ? [[0, -50, 50]] : null,
+        tick(f, t) {
+          if (t < 4 || t > 18) return;
+          for (const p of projectiles) if (p.owner !== f.i && p.life > 0 && !p.inert && Math.hypot(p.x - f.x, p.y - f.y + 55) < 100) {
+            p.life = 0; fxBurst(p.x, p.y, '#f4f0e0', 8, 4); popText(p.x, p.y - 30, 'ERASED!', '#f4f0e0'); SFX.play('grab');
+          }
+          if (t % 3 === 0) fxBurst(f.x + (Math.random() - .5) * 80, f.y - 55 + (Math.random() - .5) * 80, '#f59ab8', 1, 2, 10);
+        } },
     },
   },
   { // ---------- TOJI ZENIN ----------

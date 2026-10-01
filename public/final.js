@@ -894,6 +894,21 @@ const FINALS = {
       const cy = f.y - b.r * 2 - 10; ctx.fillStyle = '#f2c14e'; ctx.beginPath(); ctx.moveTo(f.x - 40, cy + 30); ctx.lineTo(f.x - 40, cy - 10); ctx.lineTo(f.x - 20, cy + 10); ctx.lineTo(f.x, cy - 20); ctx.lineTo(f.x + 20, cy + 10); ctx.lineTo(f.x + 40, cy - 10); ctx.lineTo(f.x + 40, cy + 30); ctx.fill();
       if (human(f) && f.fsHit) text('PRESS A TO SPIT', f.x, f.y + 30, 10, '#ffffff');
     } },
+  // ---- sketch a frame around the foe, scribble them in, then crumple the page
+  inky: { name: 'FINAL DRAFT', col: '#3a5aff', col2: '#f4f0e0', pose: 'cast', cpu: (f, foe) => near(f, foe, 500, 260),
+    run(f, t, foe) {
+      if (t === 12) { SFX.play('grab'); popText(f.x, f.y - 160, 'SKETCHING...', '#f4f0e0'); if (canBeHit(foe) && near(f, foe, 500, 260)) { f.fsHit = true; lock(foe); } }
+      if (!f.fsHit) return t > 40;
+      if (t % 6 === 0 && t < 100) fsTick(f, foe, 2, '#15151a');
+      if (t === 110) { SFX.play('boom'); popText(foe.x, foe.y - 160, 'CRUMPLE!', '#f4f0e0'); fsFinish(f, foe, 12, 45, dirTo(f, foe)); return true; }
+    },
+    draw(f, t, foe) {
+      if (!f.fsHit) return;
+      const k = Math.min(1, (t - 12) / 20), x = foe.x - 70, y = foe.y - 150;
+      ctx.strokeStyle = '#f4f0e0'; ctx.lineWidth = 8; ctx.strokeRect(x, y, 140 * k, 160 * k);
+      ctx.strokeStyle = '#15151a'; ctx.lineWidth = 4;
+      if (t > 30) for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(x + Math.random() * 140, y + Math.random() * 160); ctx.lineTo(x + Math.random() * 140, y + Math.random() * 160); ctx.stroke(); }
+    } },
 };
 for (const ch of CHARS) ch.fs = FINALS[ch.id];
 

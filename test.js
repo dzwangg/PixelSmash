@@ -164,7 +164,12 @@ function tests() {
     for (let i = 0; i < 200; i++) tick(); assert(foe.confT > 0, 'no confiscation'); setAct(foe, 'stand'); special(foe, { ...blank(), x: 1 }); assert(foe.act !== 'move', 'confiscated foe still used a special'); }
   { const [f, foe] = fresh(id('yuta'), id('blaze')); f.x = -40; foe.x = 60; f.face = 1; special(f, { ...blank(), x: 1 }); // Copy uses THEIR side special
     for (let i = 0; i < 6; i++) tick(); assert(f.move?.jjPaste, 'Yuta did not copy the side special'); }
-  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy');
+  { const [f] = fresh(id('inky'), 1); f.x = 0; f.y = -300; f.ground = null; setAct(f, 'air'); special(f, { ...blank(), y: -1 }); // Sketch Step: stand on the drawn platform until it fades
+    for (let i = 0; i < 60; i++) step(f, blank()); const pl = owned(f, 'ink_plat'); assert(pl && f.ground === pl, 'Inky did not land on her platform');
+    for (let i = 0; i < 260; i++) tick(); assert(f.ground !== pl, 'still standing on an expired platform');
+    f.uses?.clear(); f.y = -300; f.ground = null; setAct(f, 'air'); special(f, { ...blank(), y: -1 }); for (let i = 0; i < 40; i++) step(f, blank());
+    assert(!owned(f, 'ink_plat'), 'platform drawn again during cooldown'); }
+  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform');
   console.log('OK');
 }
 vm.runInNewContext(src + '\n;(' + tests.toString() + ')();', ctx);
