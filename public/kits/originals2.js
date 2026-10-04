@@ -774,6 +774,12 @@ KITS.deadeye = {
     } },
   },
 };
+// CPU: an empty gun means reload when there's room, otherwise back off to make some
+CHARS.find(c => c.id === 'deadeye').cpuPlan = (f, foe, p) => {
+  if (o2_ammo(f) > 0 || !f.ground) return false;
+  if (Math.abs(foe.x - f.x) > 160) { p.b = 1; p.ax = 0; p.ay = 1; } else p.x = -Math.sign(foe.x - f.x) || -f.face;
+  return true;
+};
 
 // ================= wiring =================
 // every move start (and every sprite draw in the browser) makes sure the fighter's passive brain is running

@@ -642,6 +642,7 @@ function cpuDecide(f, foe, ai, M) {
   const foeGone = ['dead', 'out', 'respawn'].includes(foe.act);
   const foeOff = !foeGone && !foe.ground && (foe.x < M.x1 - 20 || foe.x > M.x2 + 20);
   if (foeGone) { p.x = -Math.sign(f.x) * .4; return; }
+  if (f.ch.cpuPlan?.(f, foe, p)) return; // fighter-specific habits (e.g. Deadeye reloading)
   if (ball && R < .6 && Math.abs(ball.x) < M.x2) { // go break the Smash Ball
     const bx = ball.x - f.x, by = ball.y - (f.y - 60), bd = Math.sign(bx) || 1;
     ai.pressAt = 1;
@@ -745,7 +746,7 @@ function updateSelect() {
     if (m.s && cpu[o]) { cpuLv[o] = cpuLv[o] % 3 + 1; SFX.play('select'); continue; }
     if (t.locked) continue;
     const rows = Math.ceil(CHARS.length / COLS), r = t.cur / COLS | 0, c = t.cur % COLS;
-    if (m.nx) { t.cur = Math.min(CHARS.length - 1, r * COLS + (c + m.nx + COLS) % COLS); SFX.play('select'); }
+    if (m.nx) { const len = Math.min(COLS, CHARS.length - r * COLS); t.cur = r * COLS + (c + m.nx + len) % len; SFX.play('select'); } // wrap within the (possibly partial) row
     if (m.ny) { t.cur = Math.min(CHARS.length - 1, ((r + m.ny + rows) % rows) * COLS + c); SFX.play('select'); }
     if (m.a) {
       t.locked = true; SFX.play('confirm');

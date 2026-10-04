@@ -122,6 +122,7 @@ function tests() {
   const press = (code, n = 2) => { keys.add(code); for (let i = 0; i < n; i++) tick(); keys.delete(code); for (let i = 0; i < 3; i++) tick(); };
   sel[0].cur = 0; press('KeyF');
   assert(sel[0].locked && cpu[1] && !sel[1].locked, 'CPU should auto-join unlocked');
+  sel[1].cur = CHARS.length - 1; press('KeyD'); assert(sel[1].cur === (CHARS.length - 1) - (CHARS.length - 1) % 11, 'right on the last fighter should wrap to its row start');
   const before = sel[1].cur; press('KeyD'); assert(sel[1].cur !== before || before === 2, 'P1 steers CPU cursor');
   sel[1].cur = 2; press('KeyF'); assert(sel[1].locked, 'CPU locked by P1');
   for (let i = 0; i < 20; i++) tick(); press('KeyF'); assert(state === 'stage', 'to stage select, got ' + state);
@@ -174,7 +175,10 @@ function tests() {
     for (let k = 0; k < 6; k++) fire(); assert(f.dd_ammo === 0, `deadeye has ${f.dd_ammo} left after 6 shots`);
     const n = shots(); fire(); assert(shots() === 6 && n === 6, `${shots()} bullets fired from a six-shooter`);
     special(f, { ...blank(), y: 1 }); for (let i = 0; i < 40; i++) tick(); assert(f.dd_ammo === 6, 'reload did not refill the cylinder'); }
-  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo');
+  { const [f, foe] = fresh(id('deadeye'), 1); cpu[0] = true; f.x = -300; foe.x = 300; f.dd_ammo = 0; // CPU Deadeye reloads an empty gun
+    let i = 0; for (; i < 120 && f.dd_ammo === 0; i++) tick(); cpu[0] = false;
+    assert(f.dd_ammo === 6, 'CPU Deadeye did not reload its empty gun within 2s'); }
+  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo + CPU reload');
   console.log('OK');
 }
 vm.runInNewContext(src + '\n;(' + tests.toString() + ')();', ctx);
