@@ -438,6 +438,15 @@ CHARS.push(
         } },
     },
   },
+  { // ---------- DEADEYE (original) ----------
+    id: 'deadeye', name: 'DEADEYE', title: 'Six-Shot Sheriff', color: '#d8a050', fx: '#ffe0a0',
+    desc: 'Six chambers, then reload.', stats: { speed: 3, power: 3, weight: 3, jump: 3 },
+    ...phys({ walk: 5.8, jump: 16, weight: 96 }), pw: 1, rc: 1, sp: 1,
+    specials: ['Quick Draw', 'Fan the Hammer', 'Spur Kick', 'Reload'],
+    draw: look({ skin: SKIN, eye: '#2a2a2a', top: '#8a4a2a', style: 'vest', top2: '#e8dcc0', sleeve: '#e8dcc0', legs: '#3a4a6a', boots: '#5a3a1a',
+      head(g, h) { dome(g, h, '#5a3a1a'); oval(g, h.x, h.y - 4.5, 10, 1.6, '#6a4a2a'); oval(g, h.x, h.y - 7.5, 5.5, 3.5, '#6a4a2a'); box(g, h.x - 5, h.y - 6, 10, 1.2, '#d8a050'); box(g, h.x - 1, h.y + 4.5, 5, 1, '#5a3a1a'); } }),
+    specials_: {},
+  },
   { // ---------- TOJI ZENIN ----------
     id: 'toji', name: 'TOJI', title: 'Sorcerer Killer', series: 'JUJUTSU KAISEN', color: '#6a6f7a', fx: '#b8b0c8',
     desc: 'Zero cursed energy, monstrous body. Domains cannot sure-hit him.', stats: { speed: 5, power: 4, weight: 3, jump: 5 },

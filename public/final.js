@@ -909,6 +909,20 @@ const FINALS = {
       ctx.strokeStyle = '#15151a'; ctx.lineWidth = 4;
       if (t > 30) for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(x + Math.random() * 140, y + Math.random() * 160); ctx.lineTo(x + Math.random() * 140, y + Math.random() * 160); ctx.stroke(); }
     } },
+  // ---- high noon: the foe is pinned in the sights, six shots, then the last one launches
+  deadeye: { name: 'HIGH NOON', col: '#d8a050', col2: '#ff6a1f', pose: 'cast', cpu: (f, foe) => near(f, foe, 700, 300),
+    run(f, t, foe) {
+      if (t === 10) { popText(f.x, f.y - 160, "IT'S HIGH NOON...", '#ffe0a0'); if (canBeHit(foe) && near(f, foe, 700, 300)) { f.fsHit = true; lock(foe); } }
+      if (!f.fsHit) return t > 40;
+      if (t >= 40 && t <= 90 && t % 10 === 0) { SFX.play('laser'); fsTick(f, foe, 3, '#f2c14e'); }
+      if (t === 110) { SFX.play('boom'); fsFinish(f, foe, 12, 40, dirTo(f, foe)); f.dd_ammo = O2_AMMO; return true; }
+    },
+    draw(f, t, foe) {
+      if (!f.fsHit) return;
+      const r = 70 - Math.min(40, t), x = foe.x, y = foe.y - 55;
+      ctx.strokeStyle = '#ff3b3b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.beginPath(); ctx.moveTo(x + dx * r * .5, y + dy * r * .5); ctx.lineTo(x + dx * r * 1.4, y + dy * r * 1.4); ctx.stroke(); }
+    } },
 };
 for (const ch of CHARS) ch.fs = FINALS[ch.id];
 

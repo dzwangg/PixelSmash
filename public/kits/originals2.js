@@ -1,9 +1,9 @@
-// Kit overrides: originals2 (see KIT_API guide) — kaiju, djbass, mimi, astro, granny, kage, cluck, gloop.
+// Kit overrides: originals2 (see KIT_API guide) — kaiju, djbass, mimi, astro, granny, kage, cluck, gloop, deadeye.
 // Every top-level name is prefixed o2_. Passive mechanics (meters) run in an invisible per-fighter
 // "brain" projectile (kind 'o2_brain') that is spawned from the fighter's draw and from every move start.
 
 // ================= shared helpers =================
-const O2_IDS = ['kaiju', 'djbass', 'mimi', 'astro', 'granny', 'kage', 'cluck', 'gloop'];
+const O2_IDS = ['kaiju', 'djbass', 'mimi', 'astro', 'granny', 'kage', 'cluck', 'gloop', 'deadeye'];
 const O2_PASSIVE = {}, O2_HUD = {};
 const O2_BUSY = ['dead', 'out', 'respawn', 'ledge', 'held', 'hold', 'locked', 'final', 'climb', 'shield']; // shield blocks grabs/stuns (grab beats shield)
 const o2_foe = f => fighters[1 - f.i];
@@ -741,6 +741,37 @@ KITS.gloop = {
   },
   normals: { // Slime Splat: sticky nair
     nair: { s: 5, a: 8, e: 12, hb: [[0, -45, 52]], dmg: 7, b: 5, g: .3, ang: 50, slow: 60, away: 1, air: 1, ll: 8, p: ['jump', 'nair'] },
+  },
+};
+
+// ================= DEADEYE — six chambers, manual reload =================
+const O2_AMMO = 6;
+const o2_ammo = f => f.dd_ammo ?? O2_AMMO;
+function o2_drawBullet(c, p) { const d = Math.sign(p.vx) || 1; pxRect(c, p.x - d * 26, p.y - 1, 22, 2, '#ffe0a0aa'); pxDisc(c, p.x, p.y, 5, '#f2c14e'); }
+function o2_fire(f, vy = 0) { // one bullet out of the cylinder; an empty gun just clicks
+  if (o2_ammo(f) <= 0) { SFX.play('select'); popText(f.x, f.y - 140, '*click*', '#aaaaaa'); return false; }
+  f.dd_ammo = o2_ammo(f) - 1; SFX.play('laser'); fxBurst(f.x + f.face * 45, f.y - 62, '#ffe0a0', 4, 3, 10);
+  proj(f, { kind: 'o2_bullet', y: -62, vx: 24, vy, r: 7, life: 40, dmg: 4, b: 3, g: .12, ang: 25, draw: o2_drawBullet });
+  return true;
+}
+O2_PASSIVE.deadeye = f => { if (f.act === 'respawn') f.dd_ammo = O2_AMMO; };
+O2_HUD.deadeye = f => { // the cylinder: one pip per chamber above the P tag
+  const y = f.y - f.ch.hh * SC(f) - 52;
+  for (let i = 0; i < O2_AMMO; i++) pxDisc(ctx, f.x - 25 + i * 10, y, 4, i < o2_ammo(f) ? '#f2c14e' : '#3a3a3a');
+};
+KITS.deadeye = {
+  desc: 'Six shots, then reload. Fan the hammer to empty the cylinder at once.',
+  specials_: {
+    n: { s: 5, a: 0, e: 10, p: ['castW', 'cast'], tick(f, t) { if (t === 5) o2_fire(f); } },
+    s: { dur: 32, p: ['castW', 'cast'], tick(f, t) {
+      if (t === 4 && o2_ammo(f) <= 0) o2_fire(f); // click
+      if (t >= 6 && t <= 26 && (t - 6) % 4 === 0 && o2_ammo(f) > 0) { o2_fire(f, (Math.random() - .5) * 3); f.vx -= f.face * .8; }
+    } },
+    u: mRise({ vy: -18, col: '#d8a050', dmg: 3, fin: 6, pose: 'upcut' }),
+    d: { dur: 34, p: ['crouch', 'crouch'], tick(f, t) {
+      if (t === 6) SFX.play('charge');
+      if (t === 26) { f.dd_ammo = O2_AMMO; SFX.play('confirm'); popText(f.x, f.y - 140, 'RELOADED', '#f2c14e'); }
+    } },
   },
 };
 

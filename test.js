@@ -169,7 +169,12 @@ function tests() {
     for (let i = 0; i < 260; i++) tick(); assert(f.ground !== pl, 'still standing on an expired platform');
     f.uses?.clear(); f.y = -300; f.ground = null; setAct(f, 'air'); special(f, { ...blank(), y: -1 }); for (let i = 0; i < 40; i++) step(f, blank());
     assert(!owned(f, 'ink_plat'), 'platform drawn again during cooldown'); }
-  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform');
+  { const [f] = fresh(id('deadeye'), 1); f.x = -300; const seen = new Set(), shots = () => (projectiles.forEach(p => p.kind === 'o2_bullet' && seen.add(p)), seen.size); // six chambers, then reload
+    const fire = () => { special(f, blank()); for (let i = 0; i < 16; i++) { tick(); shots(); } };
+    for (let k = 0; k < 6; k++) fire(); assert(f.dd_ammo === 0, `deadeye has ${f.dd_ammo} left after 6 shots`);
+    const n = shots(); fire(); assert(shots() === 6 && n === 6, `${shots()} bullets fired from a six-shooter`);
+    special(f, { ...blank(), y: 1 }); for (let i = 0; i < 40; i++) tick(); assert(f.dd_ammo === 6, 'reload did not refill the cylinder'); }
+  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo');
   console.log('OK');
 }
 vm.runInNewContext(src + '\n;(' + tests.toString() + ')();', ctx);
