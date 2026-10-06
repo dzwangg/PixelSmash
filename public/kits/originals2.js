@@ -827,6 +827,15 @@ KITS.blossom = {
     } },
   },
 };
+// CPU: tend the garden while the foe is away — water young plants in reach, keep three in the ground
+CHARS.find(c => c.id === 'blossom').cpuPlan = (f, foe, p) => {
+  if (!f.ground || Math.abs(foe.x - f.x) < 180) return false;
+  const mine = projectiles.filter(q => q.owner === f.i && q.kind === 'o2_plant' && q.life > 0);
+  const d = Math.sign(foe.x - f.x) || f.face;
+  if (mine.some(q => q.stopped && o2_stage(q) < 3 && Math.abs(q.x - f.x) < 240 && Math.abs(q.y - f.y) < 160)) { p.b = 1; p.ax = 0; p.ay = 1; return true; }
+  if (mine.length < 3 && Math.random() < .5) { p.x = d * .3; p.b = 1; p.ax = 0; p.ay = 0; return true; }
+  return false;
+};
 
 // ================= wiring =================
 // every move start (and every sprite draw in the browser) makes sure the fighter's passive brain is running

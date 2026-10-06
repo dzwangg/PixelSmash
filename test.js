@@ -189,7 +189,11 @@ function tests() {
     assert(plants().length === 3 && !plants().includes(pl), `expected 3 plants with the oldest withered, got ${plants().length}`);
     const q = plants()[2]; foe.x = q.x - 40; foe.face = 1; setAct(foe, 'stand'); startMove(foe, foe.ch.moves.ftilt); for (let i = 0; i < 20; i++) tick();
     assert(q.life <= 0, 'attacking a plant did not cut it down'); }
-  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo + CPU reload, blossom garden');
+  { const [f, foe] = fresh(id('blossom'), 1); cpu[0] = true; f.x = -350; foe.x = 350; // CPU Blossom gardens while the foe is far away
+    for (let i = 0; i < 180; i++) tick(); cpu[0] = false;
+    const pl = projectiles.filter(p => p.owner === 0 && p.kind === 'o2_plant' && p.stopped);
+    assert(pl.some(p => o2_stage(p) >= 2), `CPU Blossom did not plant and water within 3s (${pl.length} plants)`); }
+  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo + CPU reload, blossom garden + CPU');
   console.log('OK');
 }
 vm.runInNewContext(src + '\n;(' + tests.toString() + ')();', ctx);
