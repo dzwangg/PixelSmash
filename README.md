@@ -1,6 +1,6 @@
 # Super Pixel Smash
 
-A 2-player pixel platform fighter in the browser. 41 fighters, 10 stages, Smash Balls and a Final Smash for everyone. Play on one keyboard, or scan the QR code on the select screen to use your phone as a controller.
+A 2-player pixel platform fighter in the browser. 43 fighters, 10 stages, Smash Balls and a Final Smash for everyone. Play on one keyboard, or scan the QR code on the select screen to use your phone as a controller.
 
 ## Run
 
