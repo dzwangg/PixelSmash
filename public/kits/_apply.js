@@ -22,7 +22,7 @@ const SIG_THROWS = {
   spiderman: ['b', 'WEB SLINGSHOT', 10, 7, .55, 140], batman: ['d', 'TAKEDOWN', 9, 5, .12, 80], cap: ['f', 'SHIELD BASH', 10, 7, .5, 40],
   thor: ['u', 'THUNDER LIFT', 10, 6, .6, 90], kaiju: ['b', 'TAIL WHIP', 12, 7, .6, 140], djbass: ['u', 'DROP THE BASS', 8, 7, .55, 90],
   mimi: ['d', 'TRICK SAW', 8, 5, .12, 80], astro: ['u', 'LIFTOFF', 8, 8, .55, 90], granny: ['f', 'PURSE WALLOP', 12, 7, .55, 40],
-  toji: ['f', 'SORCERER KILLER TOSS', 11, 7, .5, 38], higuruma: ['d', 'GAVEL DROP', 9, 5, .15, 80], hakari: ['u', 'JACKPOT LAUNCH', 9, 7, .55, 90], yuta: ['b', 'RIKA TOSS', 11, 6, .55, 140], kage: ['b', 'SHADOW DROP', 10, 6, .55, 140], cluck: ['d', 'PECK STORM', 9, 5, .15, 80], gloop: ['f', 'SPIT OUT', 10, 8, .45, 30], inky: ['f', 'PAPER PLANE', 10, 8, .45, 30], deadeye: ['b', 'LASSO TOSS', 10, 7, .55, 140],
+  toji: ['f', 'SORCERER KILLER TOSS', 11, 7, .5, 38], higuruma: ['d', 'GAVEL DROP', 9, 5, .15, 80], hakari: ['u', 'JACKPOT LAUNCH', 9, 7, .55, 90], yuta: ['b', 'RIKA TOSS', 11, 6, .55, 140], kage: ['b', 'SHADOW DROP', 10, 6, .55, 140], cluck: ['d', 'PECK STORM', 9, 5, .15, 80], gloop: ['f', 'SPIT OUT', 10, 8, .45, 30], inky: ['f', 'PAPER PLANE', 10, 8, .45, 30], deadeye: ['b', 'LASSO TOSS', 10, 7, .55, 140], blossom: ['u', 'BLOOM TOSS', 9, 7, .55, 90],
 };
 for (const ch of CHARS) {
   const s = SIG_THROWS[ch.id]; if (!s) continue;

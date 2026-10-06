@@ -923,6 +923,21 @@ const FINALS = {
       ctx.strokeStyle = '#ff3b3b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.beginPath(); ctx.moveTo(x + dx * r * .5, y + dy * r * .5); ctx.lineTo(x + dx * r * 1.4, y + dy * r * 1.4); ctx.stroke(); }
     } },
+  // ---- giant vines burst up under the foe, wrap them, then fling them skyward
+  blossom: { name: 'OVERGROWTH', col: '#6dd84a', col2: '#ff7ab8', pose: 'cast', cpu: (f, foe) => near(f, foe, 800, 400),
+    run(f, t, foe) {
+      if (t === 10) { SFX.play('rock'); shakeCam(10); if (canBeHit(foe) && near(f, foe, 800, 400)) { f.fsHit = true; lock(foe); f.vineY = foe.y; } }
+      if (!f.fsHit) return t > 40;
+      if (t >= 20 && t <= 90 && t % 8 === 0) fsTick(f, foe, 2, '#6dd84a');
+      if (t === 100) { popText(foe.x, foe.y - 160, 'IN FULL BLOOM!', '#ff7ab8'); fsFinish(f, foe, 12, 85, dirTo(f, foe)); return true; }
+    },
+    draw(f, t, foe) {
+      if (!f.fsHit) return;
+      const h = Math.min(1, (t - 10) / 20) * 160, x = foe.x, y = f.vineY;
+      ctx.strokeStyle = '#2f7a2a'; ctx.lineWidth = 12;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * 40, y); for (let k = 0; k <= h; k += 10) ctx.lineTo(x + s * Math.cos(k * .06 + t * .1) * 34, y - k); ctx.stroke(); }
+      if (h >= 160) for (let i = 0; i < 5; i++) pxDisc(ctx, x + Math.cos(i * 1.26) * 40, y - 140 + Math.sin(i * 1.26) * 30, 12, i % 2 ? '#ff7ab8' : '#ffd23f');
+    } },
 };
 for (const ch of CHARS) ch.fs = FINALS[ch.id];
 

@@ -98,7 +98,7 @@ function tests() {
   console.log(`no infinites: Gojo Blue spam traps at most ${gojoTrap} frames; longest trap by any fighter ${worstAny} frames`);
 
   // smash ball: breaking it grants the final smash
-  cpu[0] = cpu[1] = false; sel[0].cur = 0; sel[1].cur = 1; startMatch(); countdown = 0; ballTimer = 1;
+  cpu[0] = cpu[1] = false; sel[0].cur = 0; sel[1].cur = 1; startMatch(); countdown = 0; ballTimer = 1; freeze = 0; // hitlag left over from the previous test would skip the ball update
   tick(); assert(ball, 'ball spawned');
   const hero = fighters[0];
   for (let i = 0; i < 40 && ball; i++) { ball.x = hero.x + 50; ball.y = hero.y - 60; ball.vx = ball.vy = 0; startMove(hero, hero.ch.moves.jab); for (let k = 0; k < 14; k++) tick(); }
@@ -178,7 +178,18 @@ function tests() {
   { const [f, foe] = fresh(id('deadeye'), 1); cpu[0] = true; f.x = -300; foe.x = 300; f.dd_ammo = 0; // CPU Deadeye reloads an empty gun
     let i = 0; for (; i < 120 && f.dd_ammo === 0; i++) tick(); cpu[0] = false;
     assert(f.dd_ammo === 6, 'CPU Deadeye did not reload its empty gun within 2s'); }
-  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo + CPU reload');
+  { const [f, foe] = fresh(id('blossom'), 1); f.x = -200; foe.x = 300; f.face = 1; // Blossom: plants grow, water rushes them, attacks cut them down, max 3
+    const plants = () => projectiles.filter(p => p.kind === 'o2_plant' && p.life > 0);
+    special(f, blank()); for (let i = 0; i < 60; i++) tick(); const pl = plants()[0];
+    assert(pl && pl.stopped && o2_stage(pl) === 1, 'seed did not plant as a sprout');
+    special(f, { ...blank(), y: 1 }); for (let i = 0; i < 30; i++) tick(); assert(o2_stage(pl) === 2, 'watering did not grow the sprout');
+    let pollen = 0; for (let i = 0; i < 300; i++) { tick(); pollen += projectiles.filter(p => p.kind === 'o2_pollen' && p.t === 1).length; } assert(o2_stage(pl) === 3, 'plant never became a sunflower');
+    assert(pollen > 0 && foe.dmg > 0, `sunflower shot ${pollen} pollen, foe at ${foe.dmg}%`);
+    for (let k = 0; k < 3; k++) { setAct(f, 'stand'); special(f, blank()); for (let i = 0; i < 60; i++) tick(); }
+    assert(plants().length === 3 && !plants().includes(pl), `expected 3 plants with the oldest withered, got ${plants().length}`);
+    const q = plants()[2]; foe.x = q.x - 40; foe.face = 1; setAct(foe, 'stand'); startMove(foe, foe.ch.moves.ftilt); for (let i = 0; i < 20; i++) tick();
+    assert(q.life <= 0, 'attacking a plant did not cut it down'); }
+  console.log('new rules OK: latch, pummel, pause, rematch, flight fuel, fast break, pounce cooldown, bingo, dunk, domains vs Toji, inverted spear, verdicts, yuta copy, inky platform, deadeye ammo + CPU reload, blossom garden');
   console.log('OK');
 }
 vm.runInNewContext(src + '\n;(' + tests.toString() + ')();', ctx);

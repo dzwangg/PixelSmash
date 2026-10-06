@@ -447,6 +447,15 @@ CHARS.push(
       head(g, h) { dome(g, h, '#5a3a1a'); oval(g, h.x, h.y - 4.5, 10, 1.6, '#6a4a2a'); oval(g, h.x, h.y - 7.5, 5.5, 3.5, '#6a4a2a'); box(g, h.x - 5, h.y - 6, 10, 1.2, '#d8a050'); box(g, h.x - 1, h.y + 4.5, 5, 1, '#5a3a1a'); } }),
     specials_: {},
   },
+  { // ---------- BLOSSOM (original) ----------
+    id: 'blossom', name: 'BLOSSOM', title: 'Wild Gardener', color: '#ff7ab8', fx: '#b8f07a',
+    desc: 'Plants seeds that grow while you fight.', stats: { speed: 3, power: 2, weight: 2, jump: 4 },
+    ...phys({ walk: 5.6, air: 5.4, jump: 16.5, djump: 14.5, weight: 90, grav: .7 }), pw: .95, rc: 1.1, sp: 1,
+    specials: ['Seed', 'Vine Whip', 'Petal Glide', 'Watering Can'],
+    draw: look({ skin: SKIN, eye: '#2a2a2a', top: '#4fbf3a', style: 'overalls', top2: '#f4f0e0', sleeve: '#f4f0e0', legs: '#3a8a2a', boots: '#8a5a2a',
+      head(g, h) { dome(g, h, '#e85a9a'); oval(g, h.x - 1, h.y + 3, 3, 4.5, '#e85a9a'); for (const [dx, c] of [[-3, '#ff7ab8'], [0, '#ffd23f'], [3, '#ff7ab8']]) oval(g, h.x + dx, h.y - 6, 1.8, 1.8, c); } }),
+    specials_: {},
+  },
   { // ---------- TOJI ZENIN ----------
     id: 'toji', name: 'TOJI', title: 'Sorcerer Killer', series: 'JUJUTSU KAISEN', color: '#6a6f7a', fx: '#b8b0c8',
     desc: 'Zero cursed energy, monstrous body. Domains cannot sure-hit him.', stats: { speed: 5, power: 4, weight: 3, jump: 5 },

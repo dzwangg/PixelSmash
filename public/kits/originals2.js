@@ -1,9 +1,9 @@
-// Kit overrides: originals2 (see KIT_API guide) — kaiju, djbass, mimi, astro, granny, kage, cluck, gloop, deadeye.
+// Kit overrides: originals2 (see KIT_API guide) — kaiju, djbass, mimi, astro, granny, kage, cluck, gloop, deadeye, blossom.
 // Every top-level name is prefixed o2_. Passive mechanics (meters) run in an invisible per-fighter
 // "brain" projectile (kind 'o2_brain') that is spawned from the fighter's draw and from every move start.
 
 // ================= shared helpers =================
-const O2_IDS = ['kaiju', 'djbass', 'mimi', 'astro', 'granny', 'kage', 'cluck', 'gloop', 'deadeye'];
+const O2_IDS = ['kaiju', 'djbass', 'mimi', 'astro', 'granny', 'kage', 'cluck', 'gloop', 'deadeye', 'blossom'];
 const O2_PASSIVE = {}, O2_HUD = {};
 const O2_BUSY = ['dead', 'out', 'respawn', 'ledge', 'held', 'hold', 'locked', 'final', 'climb', 'shield']; // shield blocks grabs/stuns (grab beats shield)
 const o2_foe = f => fighters[1 - f.i];
@@ -779,6 +779,53 @@ CHARS.find(c => c.id === 'deadeye').cpuPlan = (f, foe, p) => {
   if (o2_ammo(f) > 0 || !f.ground) return false;
   if (Math.abs(foe.x - f.x) > 160) { p.b = 1; p.ax = 0; p.ay = 1; } else p.x = -Math.sign(foe.x - f.x) || -f.face;
   return true;
+};
+
+// ================= BLOSSOM — plants grow while you fight =================
+// Seeds land and grow: SPROUT (harmless) -> THORNS (hurts on touch) -> SUNFLOWER (shoots pollen). Max 3; hit one to cut it down.
+const O2_GROW = [0, 180, 420]; // growth frames at which each stage starts
+const o2_stage = p => p.g >= O2_GROW[2] ? 3 : p.g >= O2_GROW[1] ? 2 : 1;
+function o2_drawPlant(c, p) {
+  if (!p.stopped) { pxDisc(c, p.x, p.y, 6, '#8a5a2a'); return; } // seed in flight
+  const st = o2_stage(p), sway = Math.sin(p.t * .08) * 3;
+  pxRect(c, p.x - 3, p.y - [16, 34, 60][st - 1], 6, [16, 34, 60][st - 1], '#3a8a2a');
+  if (st === 1) { pxDisc(c, p.x - 6 + sway, p.y - 16, 6, '#6dd84a'); pxDisc(c, p.x + 6 + sway, p.y - 16, 6, '#6dd84a'); return; }
+  if (st === 2) { pxDisc(c, p.x + sway, p.y - 30, 24, '#2f7a2a'); for (let i = 0; i < 6; i++) { const a = i * 1.05; pxRect(c, p.x + sway + Math.cos(a) * 24 - 2, p.y - 30 + Math.sin(a) * 24 - 2, 5, 5, '#e8e0c0'); } return; }
+  for (let i = 0; i < 8; i++) { const a = i * .785 + p.t * .02; pxDisc(c, p.x + sway + Math.cos(a) * 16, p.y - 64 + Math.sin(a) * 16, 8, '#ffd23f'); }
+  pxDisc(c, p.x + sway, p.y - 64, 11, '#8a5a2a');
+}
+function o2_drawPollen(c, p) { pxDisc(c, p.x, p.y, 8, '#ffd23f'); pxDisc(c, p.x - 2, p.y - 2, 3, '#ffffff'); }
+function o2_plant(f) {
+  const mine = projectiles.filter(p => p.owner === f.i && p.kind === 'o2_plant' && p.life > 0);
+  if (mine.length >= 3) mine[0].life = 0; // oldest one withers
+  proj(f, { kind: 'o2_plant', vx: 4, vy: -7, grav: .45, r: 26, life: 900, g: 0, inert: true, refl: false, onGround: 'stop', draw: o2_drawPlant,
+    tick(p) {
+      if (!p.stopped) return;
+      const o = fighters[p.owner], foe = fighters[1 - p.owner], st = o2_stage(p);
+      p.g++; if (p.cd > 0) p.cd--;
+      if (o2_hbTouch(foe, p.x, p.y - 25, 24)) { p.life = 0; fxBurst(p.x, p.y - 25, '#6dd84a', 12, 5); SFX.play('swing'); return; } // cut down
+      if (st === 2 && !p.cd && canBeHit(foe) && circleRect(p.x, p.y - 30, 28, hurtbox(foe))) { o2_hit(o, foe, { dmg: 4, b: 4, g: .2, ang: 75 }); p.cd = 45; }
+      if (st === 3 && p.g % 90 === 0 && canBeHit(foe)) {
+        const dx = foe.x - p.x, dy = foe.y - 55 - (p.y - 64), d = Math.hypot(dx, dy) || 1; SFX.play('throw');
+        spawn({ owner: p.owner, kind: 'o2_pollen', x: p.x, y: p.y - 64, vx: dx / d * 9, vy: dy / d * 9, r: 9, life: 70, dmg: 3, b: 3, g: .1, ang: 45, draw: o2_drawPollen });
+      }
+    } });
+}
+KITS.blossom = {
+  desc: 'Seeds grow while you fight: sprout, then thorns, then a pollen-shooting sunflower. Water them to rush it.',
+  specials_: {
+    n: { s: 8, a: 0, e: 12, p: ['castW', 'cast'], tick(f, t) { if (t === 8) { SFX.play('throw'); o2_plant(f); } } },
+    s: mStrike({ s: 10, a: 4, e: 18, hb: [[110, -55, 24], [75, -55, 22], [40, -55, 20]], dmg: 10, b: 6, g: .5, ang: 40, fx: '#6dd84a' }),
+    u: { dur: 20, airUses: 1, p: ['crouch', 'jump'], tick(f, t) { if (t === 4) { f.vy = -15; f.ground = null; SFX.play('djump'); fxBurst(f.x, f.y, '#ff7ab8', 8, 4); } if (t === 19) f.glide = true; } },
+    // every one of her plants within reach jumps a growth stage
+    d: { s: 12, a: 0, e: 14, p: ['castW', 'cast'], tick(f, t) {
+      if (t !== 12) return; SFX.play('ice');
+      for (const p of projectiles) if (p.owner === f.i && p.kind === 'o2_plant' && p.stopped && Math.abs(p.x - f.x) < 260 && Math.abs(p.y - f.y) < 160) {
+        p.g = Math.max(p.g + 240, O2_GROW[Math.min(2, o2_stage(p))]); fxBurst(p.x, p.y - 30, '#3bb0ff', 10, 4); popText(p.x, p.y - 90, 'GROW!', '#6dd84a');
+      }
+      fxBurst(f.x + f.face * 40, f.y - 50, '#3bb0ff', 8, 4);
+    } },
+  },
 };
 
 // ================= wiring =================
